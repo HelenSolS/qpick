@@ -28,15 +28,32 @@ export interface GreetingTone {
   label: string;
 }
 
+/**
+ * Detailed Telegram WebApp interface based on properties used in the app.
+ */
+export interface TelegramWebApp {
+  ready: () => void;
+  expand: () => void;
+  headerColor: string;
+  enableClosingConfirmation: () => void;
+  MainButton: {
+    text: string;
+    show: () => void;
+    hide: () => void;
+    onClick: (callback: () => void) => void;
+    offClick: (callback?: () => void) => void;
+    setText: (text: string) => void;
+  };
+  HapticFeedback: {
+    impactOccurred: (style: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft') => void;
+  };
+}
+
 // Define the Telegram WebApp interface to extend the global Window object
 declare global {
   interface Window {
     Telegram?: {
-      WebApp: {
-        ready: () => void;
-        expand: () => void;
-        headerColor: string;
-      };
+      WebApp: TelegramWebApp;
     };
   }
 }
