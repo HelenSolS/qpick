@@ -1,33 +1,17 @@
 
 import React from 'react';
-import ReactDOM from 'react-dom/client';
+import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 
-const mountApp = () => {
-  const rootElement = document.getElementById('root');
-  if (!rootElement) return;
+const container = document.getElementById('root');
 
-  const root = ReactDOM.createRoot(rootElement);
-  
+if (container) {
+  const root = createRoot(container);
   root.render(
     <React.StrictMode>
       <App />
     </React.StrictMode>
   );
-
-  // Плавно убираем прелоадер после того, как React начал рендеринг
-  const preloader = document.getElementById('preloader');
-  if (preloader) {
-    setTimeout(() => {
-      preloader.style.opacity = '0';
-      setTimeout(() => preloader.remove(), 300);
-    }, 150);
-  }
-};
-
-// Запуск приложения
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', mountApp);
 } else {
-  mountApp();
+  console.error("Critical: Root element not found");
 }
