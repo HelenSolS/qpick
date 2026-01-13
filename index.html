@@ -5,67 +5,141 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Q-PIC — Подарочные сертификаты</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Скрипт Telegram должен быть первым -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
+    <script>
+        // Немедленная инициализация Telegram
+        (function() {
+            if (window.Telegram && window.Telegram.WebApp) {
+                var tg = window.Telegram.WebApp;
+                tg.ready();
+                tg.expand();
+                if (tg.setHeaderColor) {
+                    try { tg.setHeaderColor('#ffffff'); } catch(e) {}
+                }
+            }
+        })();
+
+        // Полифилл для process (необходим для работы многих npm-пакетов в браузере)
+        window.process = {
+            env: { API_KEY: "" },
+            browser: true,
+            version: '',
+            nextTick: function(cb) { setTimeout(cb, 0); },
+            platform: 'browser',
+            cwd: function() { return '/'; }
+        };
+
+        // Отладочный вывод ошибок прямо на экран (для диагностики в Миниаппе)
+        window.onerror = function(msg, url, line, col, error) {
+            var errDiv = document.getElementById('debug-error');
+            if (errDiv) {
+                errDiv.style.display = 'block';
+                errDiv.innerHTML += '<div style="margin-bottom:5px; border-bottom:1px solid rgba(255,255,255,0.2); padding-bottom:5px;">⚠️ ' + msg + ' (строка: ' + line + ')</div>';
+            }
+            return false;
+        };
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Playfair+Display:ital,wght@0,700;1,700;1,900&display=swap" rel="stylesheet">
+
+    <!-- Полифилл для Import Maps (критично для старых версий Telegram) -->
+    <script async src="https://ga.jspm.io/npm:es-module-shims@1.10.1/dist/es-module-shims.js"></script>
+
+    <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@19.0.0",
+    "react-dom": "https://esm.sh/react-dom@19.0.0",
+    "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
+    "@google/genai": "https://esm.sh/@google/genai@1.35.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "vite": "https://esm.sh/vite@^7.3.1",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
+  }
+}
+</script>
+
     <style>
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f8f8f8;
             color: #0f172a;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            overflow-x: hidden;
+            margin: 0; padding: 0;
+            display: flex; justify-content: center;
+            min-height: 100vh; overflow-x: hidden;
         }
         #root {
-            width: 100%;
-            max-width: 450px;
-            background: white;
-            min-height: 100vh;
+            width: 100%; max-width: 450px;
+            background: white; min-height: 100vh;
             box-shadow: 0 0 60px rgba(0,0,0,0.05);
-            position: relative;
-            display: flex;
-            flex-direction: column;
+            position: relative; display: flex; flex-direction: column;
         }
         .font-serif { font-family: 'Playfair Display', serif; }
-        .animate-in {
-            animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(12px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .success-bg {
-            background: linear-gradient(135deg, #000000 0%, #2c2c2c 100%);
-        }
-        ::-webkit-scrollbar { width: 0px; }
+        .animate-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
         
-        @media print {
-            body { background: white; }
-            nav, header, button { display: none !important; }
-            #root { max-width: 100%; box-shadow: none; }
-            #certificate-card { border: none !important; width: 100% !important; }
+        /* Стили загрузчика */
+        #preloader {
+            position: fixed; inset: 0; background: white; z-index: 999;
+            display: flex; align-items: center; justify-content: center;
+            transition: opacity 0.3s ease;
+        }
+        .spinner {
+            width: 32px; height: 32px; border: 2px solid #f3f3f3;
+            border-top: 2px solid #000; border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        #debug-error {
+            display: none; position: fixed; bottom: 0; left: 0; width: 100%;
+            background: rgba(220, 38, 38, 0.95); color: white; padding: 15px;
+            font-family: monospace; font-size: 11px; z-index: 10000;
+            max-height: 40vh; overflow-y: auto;
         }
     </style>
-<script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@^19.2.3",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "vite": "https://esm.sh/vite@^7.3.1",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
-    "@google/genai": "https://esm.sh/@google/genai@^1.35.0"
-  }
-}
-</script>
 </head>
 <body>
+    <!-- Контейнер для вывода ошибок (скрыт по умолчанию) -->
+    <div id="debug-error"></div>
+
+    <!-- Заглушка пока грузится React -->
+    <div id="preloader">
+        <div class="flex flex-col items-center gap-6">
+            <div class="w-16 h-16 bg-black rounded-2xl flex items-center justify-center shadow-lg">
+                <span className="text-white text-3xl font-serif italic font-black" style="color: white; font-family: 'Playfair Display', serif; font-size: 32px; font-weight: 900; font-style: italic;">Q</span>
+            </div>
+            <div class="flex flex-col items-center gap-2">
+                <div class="spinner"></div>
+                <div class="text-[10px] uppercase font-black tracking-[0.3em] text-slate-300 mt-2">Загрузка</div>
+            </div>
+        </div>
+    </div>
+    
     <div id="root"></div>
+
+    <!-- Основной вход в приложение -->
     <script type="module" src="index.tsx"></script>
+    
+    <script>
+        // Проверка на зависание загрузки
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                var root = document.getElementById('root');
+                var debug = document.getElementById('debug-error');
+                if (root && root.innerHTML === "" && debug.style.display === 'none') {
+                    debug.style.display = 'block';
+                    debug.innerHTML = "<div>⚠️ Приложение не запустилось за 5 секунд. Возможно, браузер не поддерживает необходимые функции или файлы не найдены.</div>";
+                }
+            }, 5000);
+        });
+    </script>
 </body>
 </html>
