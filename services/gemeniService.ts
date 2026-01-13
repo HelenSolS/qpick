@@ -1,28 +1,41 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-export async function generateGreeting(
-  recipientName: string,
-  senderName: string,
-  occasion: string,
-  tone: string
-): Promise<string> {
-  try {
-    // Correct initialization: use process.env.API_KEY directly as a named parameter
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+/**
+ * Service to generate creative greeting messages using Gemini AI.
+ */
+export const generateGreeting = async (
+  sender: string,
+  recipient: string,
+  tone: string,
+  certName: string
+): Promise<string> => {
+  // Initialize Gemini API client with the environment API key
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  
+  const prompt = `Напиши короткое, вдохновляющее и теплое поздравление для подарочного сертификата на фотосессию "Q-PIC".
+    Отправитель: ${sender}
+    Получатель: ${recipient}
+    Название тарифа: ${certName}
+    Настроение (тон): ${tone}
     
-    // Using gemini-3-flash-preview for basic text generation tasks
+    Требования:
+    - Текст на русском языке.
+    - Длина до 150 символов.
+    - Без лишних кавычек в начале и конце.
+    - Упомяни, что это прекрасный повод запечатлеть момент.`;
+
+  try {
+    // Generate content using the recommended model for basic text tasks
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Напиши короткое и красивое поздравление для подарочного сертификата на фотосессию. 
-      Кому: ${recipientName}. От кого: ${senderName}. Повод: ${occasion}. Тон: ${tone}.
-      Текст должен быть на русском языке, вдохновляющим и не длиннее 250 символов.`,
+      contents: prompt,
     });
-    
-    // Accessing .text as a property, not a method, as per guidelines
-    return response.text?.trim() || "Желаю прекрасных кадров и незабываемых эмоций!";
+
+    // Access the text property directly from the response as per documentation
+    return response.text?.trim() || '';
   } catch (error) {
-    console.error("Gemini AI error:", error);
-    return "Пусть этот сертификат станет началом твоей новой прекрасной истории в фотографиях!";
+    console.error("Gemini AI Error:", error);
+    throw new Error("Не удалось сгенерировать поздравление. Пожалуйста, попробуйте позже.");
   }
-}
+};
