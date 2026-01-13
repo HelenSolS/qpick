@@ -13,13 +13,16 @@ export interface CertificateType {
 }
 
 export interface OrderDetails {
+  orderId: string;
+  transactionId: string;
+  purchaseDate: string;
   certificateId: string;
+  certName: string;
   city: City;
+  price: number;
   senderName: string;
   recipientName: string;
-  deliveryMethod: 'email' | 'telegram';
-  deliveryEmail?: string;
-  deliveryTgHandle?: string;
+  paymentMethod: string;
   greetingMessage: string;
 }
 
@@ -28,28 +31,35 @@ export interface GreetingTone {
   label: string;
 }
 
-/**
- * Detailed Telegram WebApp interface based on properties used in the app.
- */
 export interface TelegramWebApp {
   ready: () => void;
   expand: () => void;
   headerColor: string;
+  setHeaderColor: (color: string) => void;
   enableClosingConfirmation: () => void;
+  showAlert: (message: string, callback?: () => void) => void;
   MainButton: {
     text: string;
+    isVisible: boolean;
+    isActive: boolean;
     show: () => void;
     hide: () => void;
     onClick: (callback: () => void) => void;
     offClick: (callback?: () => void) => void;
     setText: (text: string) => void;
+    setParams: (params: {
+      text?: string;
+      is_visible?: boolean;
+      color?: string;
+      text_color?: string;
+      is_active?: boolean;
+    }) => void;
   };
   HapticFeedback: {
     impactOccurred: (style: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft') => void;
   };
 }
 
-// Define the Telegram WebApp interface to extend the global Window object
 declare global {
   interface Window {
     Telegram?: {
