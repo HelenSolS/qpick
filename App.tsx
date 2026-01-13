@@ -1,376 +1,238 @@
 
 import React, { useState, useEffect } from 'react';
-import { CERTIFICATES_SPB, CERTIFICATES_MSK } from './constants';
-import { CertificateType, City, OrderDetails } from './types';
+import { CERTIFICATES_SPB, CERTIFICATES_MSK } from './constants.ts';
+import { CertificateType, City, OrderDetails } from './types.ts';
 
 const App: React.FC = () => {
   const [city, setCity] = useState<City | null>(null);
-  const [currentView, setCurrentView] = useState<'catalog' | 'details' | 'checkout' | 'payment' | 'success' | 'history'>('catalog');
-  const [selectedCert, setSelectedCert] = useState<CertificateType | null>(null);
+  const [view, setView] = useState<'catalog' | 'details' | 'checkout' | 'success' | 'vault'>('catalog');
+  const [selected, setSelected] = useState<CertificateType | null>(null);
   const [loading, setLoading] = useState(false);
-  const [lastOrder, setLastOrder] = useState<OrderDetails | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'sbp'>('card');
-  const [myPurchases, setMyPurchases] = useState<OrderDetails[]>([]);
+  const [vault, setVault] = useState<OrderDetails[]>([]);
   
-  const [orderForm, setOrderForm] = useState({
-    senderName: '',
-    recipientName: '',
-    greetingMessage: '',
+  const [form, setForm] = useState({
+    sender: '',
+    recipient: '',
+    message: ''
   });
 
-  const tg = typeof window !== 'undefined' ? window.Telegram?.WebApp : undefined;
+  const tg = window.Telegram?.WebApp;
 
-  // Загружаем историю покупок (локально в телефоне клиента)
   useEffect(() => {
-    const saved = localStorage.getItem('qpic_vault_v5');
-    if (saved) {
-      try {
-        setMyPurchases(JSON.parse(saved));
-      } catch (e) {
-        console.error("Error loading history", e);
-      }
+    // Загрузка локальных заказов
+    const saved = localStorage.getItem('qpic_orders_v10');
+    if (saved) setVault(JSON.parse(saved));
+    
+    // ГАРАНТИРОВАННОЕ скрытие лоадера только после полной отрисовки
+    const loader = document.getElementById('loading-screen');
+    if (loader) {
+      loader.style.opacity = '0';
+      setTimeout(() => loader.remove(), 400);
     }
   }, []);
 
-  useEffect(() => {
-    if (tg) {
-      tg.ready();
-      tg.expand();
-      tg.setHeaderColor?.('#ffffff');
+  const haptic = (s: 'light' | 'medium' | 'heavy' = 'light') => tg?.HapticFeedback?.impactOccurred(s);
+
+  const copyCode = (order: OrderDetails) => {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(order.orderId);
     }
-  }, [tg]);
-
-  const haptic = (style: 'light' | 'medium' | 'heavy' = 'light') => {
-    tg?.HapticFeedback?.impactOccurred(style as any);
+    haptic('light');
+    tg?.showAlert(`Код ${order.orderId} скопирован.`);
   };
 
-  const resetApp = () => {
-    haptic('medium');
-    setCity(null);
-    setCurrentView('catalog');
-    setSelectedCert(null);
-    setOrderForm({ senderName: '', recipientName: '', greetingMessage: '' });
-    window.scrollTo(0, 0);
-  };
-
-  const startPayment = () => {
-    haptic('heavy');
+  const completePurchase = () => {
     setLoading(true);
-    
-    // Имитация процесса оплаты
+    haptic('heavy');
     setTimeout(() => {
-      // Генерируем 9 цифр для кода (например: 123456789)
-      const randomDigits = Math.floor(100000000 + Math.random() * 900000000).toString();
-      const fullCode = `QP-${city}-${randomDigits}`;
-      const transactionId = `TX-${Math.random().toString(36).toUpperCase().slice(2, 9)}`;
-      
-      const newOrder: OrderDetails = {
-        orderId: fullCode, 
-        transactionId,
-        purchaseDate: new Date().toLocaleString('ru-RU'),
-        certificateId: selectedCert!.id,
-        certName: selectedCert!.name,
+      const order: OrderDetails = {
+        orderId: `QP-${city}-${Math.floor(Math.random() * 900000 + 100000)}`,
+        transactionId: `TX-${Math.random().toString(36).toUpperCase().slice(2, 9)}`,
+        purchaseDate: new Date().toLocaleDateString('ru-RU'),
+        certificateId: selected!.id,
+        certName: selected!.name,
         city: city!,
-        price: selectedCert!.price,
-        senderName: orderForm.senderName,
-        recipientName: orderForm.recipientName,
-        paymentMethod: paymentMethod === 'card' ? 'Банковская карта' : 'СБП',
-        greetingMessage: orderForm.greetingMessage
+        price: selected!.price,
+        senderName: form.sender,
+        recipientName: form.recipient,
+        paymentMethod: 'Банковская карта',
+        greetingMessage: form.message
       };
-
-      setLastOrder(newOrder);
-      
-      // Сохраняем ПОЛНЫЙ код в телефоне клиента
-      const updatedHistory = [newOrder, ...myPurchases];
-      setMyPurchases(updatedHistory);
-      localStorage.setItem('qpic_vault_v5', JSON.stringify(updatedHistory));
-      
+      const newVault = [order, ...vault];
+      setVault(newVault);
+      localStorage.setItem('qpic_orders_v10', JSON.stringify(newVault));
       setLoading(false);
-      setCurrentView('success');
-      window.scrollTo(0, 0);
-    }, 2000);
+      setView('success');
+    }, 1500);
   };
 
-  const copyForAdmin = (order: OrderDetails) => {
-    // Маскируем код для админа: показываем только 3 первых и 3 последних цифры
-    // Было: QP-MSK-123456789 -> Станет: QP-MSK-123***789
-    const codeParts = order.orderId.split('-');
-    const digitsPart = codeParts[codeParts.length - 1];
-    const maskedDigits = digitsPart.slice(0, 3) + '***' + digitsPart.slice(-3);
-    const maskedCode = [...codeParts.slice(0, -1), maskedDigits].join('-');
-
-    const text = `ПОДТВЕРЖДЕНИЕ ПОКУПКИ Q-PIC
-----------------------------
-ID ТРАНЗАКЦИИ: ${order.transactionId}
-КОД (ЧАСТИЧНЫЙ): ${maskedCode}
-ТАРИФ: ${order.certName}
-ГОРОД: ${order.city}
-КЛИЕНТ: ${order.senderName}
-СУММА: ${order.price} ₽
-ДАТА: ${order.purchaseDate}
-----------------------------
-Клиент сохранил полный код в приложении. Для активации он покажет экран "Мои чеки".`;
-    
-    navigator.clipboard.writeText(text);
-    if (tg?.showAlert) tg.showAlert('Данные для админа скопированы! Отправьте этот текст в чат фотостудии.');
-    else alert('Данные для админа скопированы!');
-    haptic('medium');
-  };
-
-  const filteredCerts = city === 'SPB' ? CERTIFICATES_SPB : CERTIFICATES_MSK;
-
-  if (!city && currentView !== 'history') {
+  if (!city && view !== 'vault') {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-10 text-center animate-in">
-        <div className="w-24 h-24 bg-black rounded-[2.5rem] mb-8 flex items-center justify-center shadow-2xl">
+      <div className="flex flex-col items-center justify-center h-screen px-10 text-center bg-white">
+        <div className="w-24 h-24 bg-black rounded-[2.2rem] mb-8 flex items-center justify-center shadow-2xl">
           <span className="text-white text-5xl font-serif italic font-black">Q</span>
         </div>
-        <h1 className="text-4xl font-serif font-black italic mb-2 tracking-tighter">Q-PIC</h1>
-        <p className="text-slate-400 text-[10px] uppercase font-bold tracking-[0.4em] mb-14 italic">Сертификаты</p>
+        <h1 className="text-3xl font-black tracking-tight mb-3 uppercase">Q-PIC</h1>
+        <p className="text-gray-400 text-[10px] uppercase tracking-[0.4em] mb-14">Подарочные сертификаты</p>
         
         <div className="w-full space-y-4">
-          <button onClick={() => { haptic(); setCity('MSK'); }} className="w-full py-6 bg-white border-2 border-slate-100 hover:border-black rounded-3xl font-black text-lg transition-all active:scale-95 shadow-sm">Москва</button>
-          <button onClick={() => { haptic(); setCity('SPB'); }} className="w-full py-6 bg-white border-2 border-slate-100 hover:border-black rounded-3xl font-black text-lg transition-all active:scale-95 shadow-sm">Санкт-Петербург</button>
-          <button onClick={() => { haptic(); setCurrentView('history'); }} className="w-full py-4 text-slate-400 text-[10px] font-black uppercase tracking-widest mt-4">Мои чеки и коды</button>
+          <button onClick={() => { haptic(); setCity('MSK'); }} className="w-full py-5 border-[1.5px] border-black rounded-2xl font-bold text-lg hover:bg-black hover:text-white transition-all">МОСКВА</button>
+          <button onClick={() => { haptic(); setCity('SPB'); }} className="w-full py-5 border-[1.5px] border-black rounded-2xl font-bold text-lg hover:bg-black hover:text-white transition-all">САНКТ-ПЕТЕРБУРГ</button>
+          <button onClick={() => setView('vault')} className="pt-8 text-[11px] font-black text-gray-300 uppercase tracking-widest block mx-auto">Мои карты</button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 flex flex-col relative min-h-screen">
-      {loading && (
-        <div className="fixed inset-0 bg-white/95 backdrop-blur-xl z-[100] flex flex-col items-center justify-center p-10 text-center animate-in">
-          <div className="w-16 h-16 border-4 border-slate-100 border-t-black rounded-full animate-spin mb-8"></div>
-          <h2 className="text-2xl font-serif italic font-black mb-3 text-black">Оформление...</h2>
-          <p className="text-sm text-slate-400 font-medium">Создаем ваш цифровой сертификат</p>
+    <div className="flex flex-col min-h-screen bg-white text-black">
+      <header className="sticky top-0 z-40 bg-white border-b border-gray-100 px-6 py-5 flex justify-between items-center">
+        <div className="flex items-center gap-3" onClick={() => { haptic(); setView('catalog'); }}>
+          <div className="w-9 h-9 bg-black rounded-xl flex items-center justify-center text-white font-serif italic font-black text-lg">Q</div>
+          <span className="font-black tracking-tighter text-xl uppercase leading-none">Q-PIC</span>
         </div>
-      )}
-
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b px-6 py-5 flex justify-between items-center">
-        <div className="flex items-center gap-2 cursor-pointer" onClick={() => { if(currentView !== 'success') { haptic(); setCurrentView('catalog'); } }}>
-          <div className="w-8 h-8 bg-black rounded-xl flex items-center justify-center text-white font-serif italic font-black text-sm">Q</div>
-          <span className="font-black tracking-tighter text-xl">Q-PIC</span>
-        </div>
-        {city && currentView !== 'success' && (
-          <button onClick={() => { haptic(); setCity(null); }} className="px-4 py-1.5 bg-slate-100 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-400">
+        {city && view !== 'vault' && (
+          <button onClick={() => { haptic(); setCity(null); }} className="px-3 py-1 bg-gray-50 rounded-full text-[10px] font-bold text-gray-400 uppercase tracking-widest">
             {city} ✕
           </button>
         )}
       </header>
 
-      <main className="flex-1 px-6 pt-6 overflow-y-auto pb-40">
-        
-        {currentView === 'history' && (
-          <div className="space-y-8 animate-in pb-10">
-            <div className="flex items-center justify-between">
-              <h2 className="text-3xl font-serif italic font-black">Мои коды</h2>
-              <button onClick={() => { haptic(); setCurrentView('catalog'); if(!city) setCity('MSK'); }} className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Закрыть</button>
+      <main className="flex-1 px-6 py-8 pb-32">
+        {view === 'catalog' && (
+          <div className="space-y-8">
+            <div>
+              <h2 className="text-4xl font-serif italic font-black tracking-tight mb-2 leading-none">Выбор</h2>
+              <p className="text-gray-400 text-sm font-medium">Фотосессия в подарок</p>
             </div>
             
-            <p className="text-[11px] text-slate-400 font-bold leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-100">
-              Покажите этот экран администратору в студии. <br/><b>Важно:</b> Полный код знаете только вы.
-            </p>
-
-            {myPurchases.length === 0 ? (
-              <div className="py-20 text-center opacity-30">
-                <p className="font-black uppercase text-[10px] tracking-widest">История пуста</p>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {myPurchases.map((order) => (
-                  <div key={order.transactionId} className="bg-white border border-slate-100 rounded-[2rem] p-6 shadow-sm space-y-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="text-[9px] font-black text-slate-300 uppercase mb-1">{order.purchaseDate}</p>
-                        <h3 className="text-lg font-black leading-tight">«{order.certName}»</h3>
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{order.city}</p>
+            <div className="space-y-6">
+              {(city === 'MSK' ? CERTIFICATES_MSK : CERTIFICATES_SPB).map(c => (
+                <div key={c.id} onClick={() => { haptic(); setSelected(c); setView('details'); }} className="border border-gray-100 rounded-[2rem] overflow-hidden shadow-sm bg-white">
+                   <div className="h-44 bg-gray-50 relative">
+                      <img src={c.image} className="w-full h-full object-cover" alt={c.name} />
+                      <div className="absolute top-4 right-4 bg-black text-white px-4 py-2 rounded-full font-black text-sm">
+                        {c.price} ₽
                       </div>
-                      <p className="text-xs font-black">{order.price} ₽</p>
-                    </div>
-                    
-                    <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 space-y-3">
-                       <div className="space-y-1">
-                          <p className="text-[7px] font-black text-slate-300 uppercase tracking-widest italic">Секретный код для активации:</p>
-                          <p className="text-xl font-black tracking-[0.15em] text-black font-mono">{order.orderId}</p>
-                       </div>
-                       <div className="pt-2 border-t border-slate-200/50 flex justify-between items-center text-[8px] font-black uppercase">
-                          <span className="text-slate-400">ID: {order.transactionId}</span>
-                          <span className="text-black bg-white px-2 py-0.5 rounded shadow-sm">Оплачено</span>
-                       </div>
-                    </div>
-
-                    <button onClick={() => copyForAdmin(order)} className="w-full py-4 bg-slate-100 text-slate-900 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all">
-                       Скопировать чек для админа
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {currentView === 'catalog' && (
-          <div className="space-y-8 animate-in">
-            <h2 className="text-3xl font-serif italic font-black text-slate-900 leading-none">Тарифы</h2>
-            <div className="grid gap-6">
-              {filteredCerts.map(cert => (
-                <div key={cert.id} onClick={() => { haptic(); setSelectedCert(cert); setCurrentView('details'); }} className="bg-white rounded-[2.5rem] overflow-hidden border border-slate-100 shadow-sm active:scale-[0.98] transition-all cursor-pointer">
-                  <div className="h-48 relative">
-                    <img src={cert.image} className="w-full h-full object-cover" alt={cert.name} />
-                    <div className="absolute top-4 right-4 bg-white/95 backdrop-blur px-4 py-2 rounded-2xl font-black text-base shadow-sm">{cert.price} ₽</div>
-                  </div>
-                  <div className="p-7">
-                    <h3 className="text-2xl font-serif italic font-black mb-1">{cert.name}</h3>
-                    <p className="text-slate-400 text-xs line-clamp-2 mb-4 leading-relaxed">{cert.description}</p>
-                    <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{cert.duration}</span>
-                      <span className="text-xs font-black text-black font-serif italic">Выбрать →</span>
-                    </div>
-                  </div>
+                   </div>
+                   <div className="p-6">
+                      <h3 className="text-2xl font-black uppercase tracking-tighter mb-1">{c.name}</h3>
+                      <p className="text-gray-400 text-xs">{c.description}</p>
+                   </div>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {currentView === 'details' && selectedCert && (
-          <div className="space-y-6 animate-in">
-            <button onClick={() => setCurrentView('catalog')} className="text-slate-400 font-bold text-[10px] uppercase tracking-widest flex items-center gap-2 py-2">
-              ← Назад
-            </button>
-            <div className="bg-white rounded-[3rem] p-10 border border-slate-100 shadow-sm">
-              <h2 className="text-4xl font-serif italic font-black mb-8 leading-tight">«{selectedCert.name}»</h2>
-              <div className="space-y-4 mb-10">
-                <p className="text-[10px] uppercase font-black text-slate-300 tracking-[0.2em]">Что включено:</p>
-                {selectedCert.includes.map((item, i) => (
-                  <div key={i} className="flex gap-4 text-base font-semibold text-slate-600">
-                    <span className="text-black text-xl leading-none">✦</span> {item}
+        {view === 'details' && selected && (
+          <div className="space-y-8">
+            <div className="aspect-[4/5] rounded-[2.5rem] overflow-hidden shadow-2xl">
+              <img src={selected.image} className="w-full h-full object-cover" alt={selected.name} />
+            </div>
+            <div className="space-y-6">
+              <h2 className="text-5xl font-serif italic font-black tracking-tight">{selected.name}</h2>
+              <div className="bg-gray-50 p-8 rounded-[2rem] space-y-4">
+                <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Что включено</p>
+                {selected.includes.map((item, i) => (
+                  <div key={i} className="flex items-start gap-4 text-sm font-semibold">
+                    <span className="text-black text-lg leading-none">―</span> 
+                    <span className="flex-1">{item}</span>
                   </div>
                 ))}
               </div>
+              <button onClick={() => { haptic('medium'); setView('checkout'); }} className="w-full py-6 bg-black text-white rounded-2xl font-black uppercase text-xs tracking-[0.2em]">Оформить карту за {selected.price} ₽</button>
             </div>
-            <button onClick={() => { haptic(); setCurrentView('checkout'); }} className="w-full py-7 bg-black text-white rounded-[2rem] font-black uppercase text-xs tracking-[0.3em] shadow-xl active:scale-95 transition-all">
-               Оформить сертификат
+          </div>
+        )}
+
+        {view === 'checkout' && selected && (
+          <div className="space-y-10">
+            <div className="text-center">
+              <h2 className="text-3xl font-serif italic font-black mb-2 leading-none">Детали</h2>
+              <p className="text-gray-400 text-sm">Персонализация подарка</p>
+            </div>
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-5">От кого</label>
+                <input value={form.sender} onChange={e => setForm({...form, sender: e.target.value})} className="w-full p-6 bg-gray-50 rounded-2xl outline-none border border-transparent focus:border-black/10 transition-all font-medium" placeholder="Ваше имя" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-5">Кому</label>
+                <input value={form.recipient} onChange={e => setForm({...form, recipient: e.target.value})} className="w-full p-6 bg-gray-50 rounded-2xl outline-none border border-transparent focus:border-black/10 transition-all font-medium" placeholder="Имя получателя" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-5">Пожелание</label>
+                <textarea value={form.message} onChange={e => setForm({...form, message: e.target.value})} className="w-full p-6 bg-gray-50 rounded-2xl outline-none border border-transparent focus:border-black/10 transition-all h-32 resize-none font-medium text-sm" placeholder="Напишите теплые слова вручную..." />
+              </div>
+            </div>
+            <button disabled={!form.sender || !form.recipient || loading} onClick={completePurchase} className="w-full py-7 bg-black text-white rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] shadow-xl disabled:opacity-20 transition-opacity">
+              {loading ? 'ПРОВЕРКА...' : `ОПЛАТИТЬ ${selected.price} ₽`}
             </button>
           </div>
         )}
 
-        {currentView === 'checkout' && (
-          <div className="space-y-8 animate-in">
-            <h2 className="text-3xl font-serif italic font-black">Данные</h2>
-            <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm space-y-6">
-                <div className="space-y-3">
-                    <label className="ml-3 text-[10px] uppercase font-black text-slate-300 tracking-widest">Имя покупателя</label>
-                    <input className="w-full p-6 bg-slate-50 rounded-2xl outline-none font-bold text-base" placeholder="Кто дарит?" value={orderForm.senderName} onChange={e => setOrderForm({...orderForm, senderName: e.target.value})} />
-                </div>
-                <div className="space-y-3">
-                    <label className="ml-3 text-[10px] uppercase font-black text-slate-300 tracking-widest">Имя получателя</label>
-                    <input className="w-full p-6 bg-slate-50 rounded-2xl outline-none font-bold text-base" placeholder="Кому подарок?" value={orderForm.recipientName} onChange={e => setOrderForm({...orderForm, recipientName: e.target.value})} />
-                </div>
-                <button 
-                    disabled={!orderForm.senderName || !orderForm.recipientName}
-                    onClick={() => { haptic('medium'); setCurrentView('payment'); }}
-                    className="w-full py-7 bg-black text-white rounded-2xl font-black uppercase text-xs tracking-widest disabled:opacity-20 shadow-lg active:scale-95 transition-all mt-4"
-                >
-                    Перейти к оплате
-                </button>
+        {view === 'success' && (
+          <div className="flex flex-col items-center justify-center py-12 text-center space-y-10">
+            <div className="w-24 h-24 bg-black rounded-full flex items-center justify-center text-white shadow-2xl">
+              <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 13l4 4L19 7" /></svg>
+            </div>
+            <div className="space-y-3">
+              <h2 className="text-4xl font-serif italic font-black">Готово!</h2>
+              <p className="text-gray-400 font-medium px-8">Электронная карта создана и сохранена в вашем кабинете.</p>
+            </div>
+            <div className="w-full p-10 bg-gray-50 rounded-[3rem] border-2 border-dashed border-black/10">
+                <p className="text-4xl font-black tracking-[0.2em] font-mono mb-2 leading-none">{vault[0].orderId}</p>
+                <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Код сертификата</p>
+            </div>
+            <div className="w-full space-y-4">
+              <button onClick={() => { haptic(); setView('vault'); }} className="w-full py-6 bg-black text-white rounded-2xl font-black uppercase text-xs tracking-[0.2em]">Мои сертификаты</button>
+              <button onClick={() => { haptic(); setCity(null); setView('catalog'); }} className="text-xs font-black text-gray-300 uppercase tracking-widest">На главную</button>
             </div>
           </div>
         )}
 
-        {currentView === 'payment' && (
-          <div className="space-y-8 animate-in">
-             <h2 className="text-3xl font-serif italic font-black">Оплата</h2>
-             <div className="bg-white rounded-[2.5rem] p-10 border border-slate-100 shadow-sm space-y-8 text-center">
-                <div className="space-y-2">
-                   <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">К оплате</p>
-                   <p className="text-5xl font-black tracking-tighter">{selectedCert?.price} ₽</p>
-                </div>
-                
-                <div className="space-y-4 text-left">
-                   <button onClick={() => { haptic(); setPaymentMethod('card'); }} className={`w-full p-6 rounded-2xl flex items-center justify-between border-2 transition-all ${paymentMethod === 'card' ? 'border-black bg-black text-white' : 'border-slate-50 bg-slate-50'}`}>
-                      <span className="font-black text-[10px] uppercase tracking-widest">Карта</span>
-                      <span className="text-xl">💳</span>
-                   </button>
-                   <button onClick={() => { haptic(); setPaymentMethod('sbp'); }} className={`w-full p-6 rounded-2xl flex items-center justify-between border-2 transition-all ${paymentMethod === 'sbp' ? 'border-black bg-black text-white' : 'border-slate-50 bg-slate-50'}`}>
-                      <span className="font-black text-[10px] uppercase tracking-widest">СБП</span>
-                      <span className="text-xl">📲</span>
-                   </button>
-                </div>
+        {view === 'vault' && (
+          <div className="space-y-10">
+             <div className="flex justify-between items-end">
+                <h2 className="text-4xl font-serif italic font-black leading-none">Карты</h2>
+                <button onClick={() => { haptic(); if(!city) setCity('MSK'); setView('catalog'); }} className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Закрыть</button>
              </div>
-             <button onClick={startPayment} className="w-full py-7 bg-black text-white rounded-[2rem] font-black uppercase text-xs tracking-[0.3em] active:scale-95 transition-all">
-               Оплатить {selectedCert?.price} ₽
-             </button>
-          </div>
-        )}
-
-        {currentView === 'success' && lastOrder && (
-          <div className="animate-in py-4 space-y-8 pb-20">
-            <div className="bg-white rounded-[3rem] shadow-2xl overflow-hidden border border-slate-100">
-                <div className="success-bg p-12 text-center text-white space-y-6">
-                    <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-white/10">
-                        <span className="text-3xl font-serif italic font-black">Q</span>
+             {vault.length === 0 ? (
+               <div className="py-32 text-center italic text-gray-200 text-3xl font-serif">Пусто</div>
+             ) : (
+               <div className="space-y-8">
+                  {vault.map(o => (
+                    <div key={o.orderId} className="border border-gray-100 rounded-[2.5rem] p-8 space-y-6 shadow-sm bg-white relative">
+                       <div className="flex justify-between items-start">
+                          <div>
+                            <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-1">{o.purchaseDate}</span>
+                            <h3 className="font-black text-xl uppercase tracking-tighter">«{o.certName}»</h3>
+                          </div>
+                          <span className="text-[10px] font-black bg-black text-white px-3 py-1 rounded-full">{o.city}</span>
+                       </div>
+                       <div className="bg-gray-50 p-6 rounded-2xl text-center border-2 border-dashed border-gray-100">
+                          <p className="font-mono font-black text-2xl tracking-[0.2em]">{o.orderId}</p>
+                       </div>
+                       <button onClick={() => copyCode(o)} className="w-full py-4 bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-transform active:scale-95">Копировать код</button>
                     </div>
-                    <div>
-                        <p className="text-[8px] font-black uppercase tracking-[0.4em] opacity-40 mb-3 italic">Готово!</p>
-                        <h3 className="text-2xl font-serif italic font-black">«{lastOrder.certName}»</h3>
-                    </div>
-                    
-                    <div onClick={() => { navigator.clipboard.writeText(lastOrder.orderId); haptic(); }} className="bg-white/5 border border-dashed border-white/20 p-5 rounded-xl cursor-pointer active:scale-95 transition-all group">
-                        <p className="text-2xl font-black tracking-[0.2em] font-mono">{lastOrder.orderId}</p>
-                        <p className="text-[7px] font-black uppercase tracking-widest mt-2 opacity-50 underline decoration-white/20">НАЖМИТЕ, ЧТОБЫ СКОПИРОВАТЬ</p>
-                    </div>
-                </div>
-                
-                <div className="p-8 space-y-6">
-                    <div className="bg-slate-50 p-6 rounded-2xl border-2 border-dashed border-slate-100">
-                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest text-center mb-4">Данные транзакции</p>
-                        <div className="space-y-2">
-                           <div className="flex justify-between items-center text-[10px] font-bold">
-                              <span className="text-slate-400 uppercase">ID:</span>
-                              <span className="font-mono text-black">{lastOrder.transactionId}</span>
-                           </div>
-                           <div className="flex justify-between items-center text-[10px] font-bold">
-                              <span className="text-slate-400 uppercase">Дата:</span>
-                              <span className="text-black">{lastOrder.purchaseDate}</span>
-                           </div>
-                        </div>
-                    </div>
-                    <p className="text-[9px] text-slate-400 font-bold text-center leading-relaxed italic">
-                        Код сохранен в разделе «Мои коды». <br/>Предъявите его в студии при визите.
-                    </p>
-                </div>
-            </div>
-
-            <div className="grid gap-3">
-                <button onClick={() => copyForAdmin(lastOrder)} className="w-full py-6 bg-black text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg active:scale-95 transition-all flex items-center justify-center gap-3">
-                  Скопировать чек для Админа
-                </button>
-                <button onClick={resetApp} className="w-full py-6 bg-slate-100 text-slate-400 rounded-2xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all">В начало</button>
-            </div>
+                  ))}
+               </div>
+             )}
           </div>
         )}
       </main>
 
-      {/* Footer Nav */}
-      {['catalog', 'details', 'history'].includes(currentView) && (
-         <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[450px] bg-white/80 backdrop-blur-xl border-t p-7 flex justify-around items-center z-40 shadow-[0_-10px_40px_rgba(0,0,0,0.03)]">
-            <button 
-                onClick={() => { haptic(); setCurrentView('catalog'); }} 
-                className={`transition-all p-2 rounded-xl ${currentView === 'catalog' || currentView === 'details' ? 'text-black bg-slate-50 shadow-inner' : 'text-slate-200'}`}
-            >
-               <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
-            </button>
-            <div className="w-px h-6 bg-slate-100"></div>
-            <button 
-                onClick={() => { haptic(); setCurrentView('history'); }} 
-                className={`transition-all p-2 rounded-xl ${currentView === 'history' ? 'text-black bg-slate-50 shadow-inner' : 'text-slate-200'}`}
-            >
-               <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-            </button>
-         </nav>
+      {['catalog', 'details', 'vault'].includes(view) && (
+        <nav className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[220px] bg-black/90 backdrop-blur-2xl rounded-full px-4 py-3 flex justify-around items-center z-50 shadow-2xl border border-white/10">
+          <button onClick={() => { haptic(); setView('catalog'); if(!city) setCity('MSK'); }} className={`p-3 rounded-full transition-all ${view === 'catalog' || view === 'details' ? 'bg-white text-black' : 'text-white/40'}`}>
+             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
+          </button>
+          <div className="w-px h-6 bg-white/10"></div>
+          <button onClick={() => { haptic(); setView('vault'); }} className={`p-3 rounded-full transition-all ${view === 'vault' ? 'bg-white text-black' : 'text-white/40'}`}>
+             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          </button>
+        </nav>
       )}
     </div>
   );
