@@ -1,228 +1,49 @@
-
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Q-PIC | Сертификаты</title>
-    
-    <!-- Зависимости: React, Tailwind, Fonts -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Playfair+Display:ital,wght@0,900;1,900&display=swap" rel="stylesheet">
-
-    <style>
-        body { font-family: 'Inter', sans-serif; background: #ffffff; color: #000; margin: 0; -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
-        .font-serif { font-family: 'Playfair Display', serif; }
-        #root { max-width: 450px; margin: 0 auto; min-height: 100vh; position: relative; }
-        
-        /* Анимации */
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade { animation: fadeIn 0.4s ease forwards; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .spinner { width: 30px; height: 30px; border: 3px solid #f3f3f3; border-top-color: #000; border-radius: 50%; animation: spin 1s linear infinite; }
-    </style>
-<script type="importmap">
-{
-  "imports": {
-    "vite": "https://esm.sh/vite@^7.3.1",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
-  }
-}
-</script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Q-PIC | Сертификаты</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Playfair+Display:ital,wght@0,900;1,900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #ffffff; color: #000; margin: 0; }
+    #root { max-width: 450px; margin: 0 auto; min-height: 100vh; position: relative; }
+  </style>
 </head>
 <body>
-    <div id="root"></div>
-
-    <script>
-        const h = React.createElement;
-        const { useState, useEffect } = React;
-
-        // --- КОНСТАНТЫ ---
-        const CERTIFICATES = {
-            MSK: [
-                { id: 'msk-1', name: 'ЭКСПРЕСС', price: 1350, img: 'https://images.unsplash.com/photo-1520106212299-d99c443e4568?q=80&w=800', desc: '10 минут, все исходники, 10 фото в ретуши.', includes: ['10 мин съемки', 'Все исходники', '10 фото в обработке'] },
-                { id: 'msk-2', name: 'СТАНДАРТ', price: 2450, img: 'https://images.unsplash.com/photo-1549463017-23c0979bb4c9?q=80&w=800', desc: '20 минут, прогулка по центру, 20 фото.', includes: ['20 мин съемки', 'Все исходники', '20 фото в обработке'] },
-                { id: 'msk-3', name: 'ПРЕМИУМ', price: 6500, img: 'https://images.unsplash.com/photo-1513326738677-b964603b136d?q=80&w=800', desc: '60 минут, любая локация, 60 фото.', includes: ['60 мин съемки', 'Все исходники', '60 фото в обработке'] }
-            ],
-            SPB: [
-                { id: 'spb-1', name: 'ЭКСПРЕСС', price: 1200, img: 'https://images.unsplash.com/photo-1548834925-e48f8a27ae6f?q=80&w=800', desc: '10 минут на Дворцовой или в центре.', includes: ['10 мин съемки', 'Все исходники', '10 фото в обработке'] },
-                { id: 'spb-2', name: 'СТАНДАРТ', price: 2100, img: 'https://images.unsplash.com/photo-1551044045-893f4eec5e77?q=80&w=800', desc: '20 минут, исторические локации СПб.', includes: ['20 мин съемки', 'Все исходники', '20 фото в обработке'] },
-                { id: 'spb-3', name: 'ПРЕМИУМ', price: 6100, img: 'https://images.unsplash.com/photo-1591129841117-3adfd313e34f?q=80&w=800', desc: '60 минут, авторский маршрут.', includes: ['60 мин съемки', 'Все исходники', '60 фото в обработке'] }
-            ]
-        };
-
-        // --- ПРИЛОЖЕНИЕ ---
-        function App() {
-            const [city, setCity] = useState(null);
-            const [view, setView] = useState('catalog'); // catalog, details, checkout, payment, success, vault
-            const [selected, setSelected] = useState(null);
-            const [vault, setVault] = useState([]);
-            const [form, setForm] = useState({ sender: '', recipient: '', message: '' });
-
-            const tg = window.Telegram ? window.Telegram.WebApp : null;
-
-            useEffect(() => {
-                if (tg) { tg.ready(); tg.expand(); }
-                
-                // Загрузка и фильтрация просроченных (6 месяцев)
-                const saved = localStorage.getItem('qpic_storage_v1');
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    const now = new Date();
-                    const active = parsed.filter(o => new Date(o.expiry) > now);
-                    setVault(active);
-                    localStorage.setItem('qpic_storage_v1', JSON.stringify(active));
-                }
-            }, []);
-
-            const haptic = (type = 'light') => { if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred(type); };
-
-            const handleBuy = () => {
-                haptic('medium');
-                setView('payment');
-                setTimeout(() => {
-                    const now = new Date();
-                    const expiry = new Date();
-                    expiry.setMonth(expiry.getMonth() + 6);
-
-                    const newOrder = {
-                        id: 'QP-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
-                        name: selected.name,
-                        price: selected.price,
-                        city: city,
-                        expiry: expiry.toISOString(),
-                        date: now.toLocaleDateString('ru-RU'),
-                        status: 'active'
-                    };
-
-                    const updatedVault = [newOrder, ...vault];
-                    setVault(updatedVault);
-                    localStorage.setItem('qpic_storage_v1', JSON.stringify(updatedVault));
-                    setView('success');
-                    haptic('heavy');
-                }, 2500);
-            };
-
-            // Рендер: Выбор города
-            if (!city && view !== 'vault') {
-                return h('div', { className: 'flex flex-col items-center justify-center min-h-screen px-10 text-center animate-fade' },
-                    h('div', { className: 'w-24 h-24 bg-black rounded-[2rem] mb-8 flex items-center justify-center shadow-xl' },
-                        h('span', { className: 'text-white text-5xl font-serif italic font-black' }, 'Q')
-                    ),
-                    h('h1', { className: 'text-3xl font-black mb-2 uppercase' }, 'Q-PIC'),
-                    h('p', { className: 'text-gray-400 text-[10px] uppercase tracking-[0.4em] mb-12' }, 'Сертификаты'),
-                    h('div', { className: 'w-full space-y-4' },
-                        h('button', { onClick: () => { setCity('MSK'); haptic(); }, className: 'w-full py-5 border-2 border-black rounded-2xl font-black text-lg active:bg-black active:text-white transition-all' }, 'МОСКВА'),
-                        h('button', { onClick: () => { setCity('SPB'); haptic(); }, className: 'w-full py-5 border-2 border-black rounded-2xl font-black text-lg active:bg-black active:text-white transition-all' }, 'ПЕТЕРБУРГ'),
-                        h('button', { onClick: () => setView('vault'), className: 'pt-6 text-[11px] font-black text-gray-300 uppercase tracking-widest block mx-auto' }, 'Мои покупки')
-                    )
-                );
-            }
-
-            // Навигация
-            const nav = h('nav', { className: 'fixed bottom-8 left-1/2 -translate-x-1/2 w-[180px] bg-black/95 rounded-full p-2 flex justify-between items-center z-50 shadow-2xl' },
-                h('button', { onClick: () => { setView('catalog'); haptic(); }, className: `p-3 rounded-full transition-all ${view !== 'vault' ? 'bg-white text-black' : 'text-white/30'}` }, 
-                    h('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, h('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: 3, d: 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z' }))
-                ),
-                h('button', { onClick: () => { setView('vault'); haptic(); }, className: `p-3 rounded-full transition-all ${view === 'vault' ? 'bg-white text-black' : 'text-white/30'}` },
-                    h('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, h('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: 3, d: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z' }))
-                )
-            );
-
-            const header = h('header', { className: 'sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b px-6 py-4 flex justify-between items-center' },
-                h('div', { className: 'flex items-center gap-2', onClick: () => setView('catalog') },
-                    h('div', { className: 'w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-serif italic font-black' }, 'Q'),
-                    h('span', { className: 'font-black text-lg' }, 'Q-PIC')
-                ),
-                city && view !== 'vault' && h('button', { onClick: () => setCity(null), className: 'text-[10px] font-black text-gray-400 uppercase bg-gray-50 px-3 py-1 rounded-full' }, city + ' ✕')
-            );
-
-            return h('div', { className: 'min-h-screen bg-white pb-32' },
-                header,
-                h('main', { className: 'px-6 py-8' },
-                    view === 'catalog' && h('div', { className: 'animate-fade' },
-                        h('h2', { className: 'text-4xl font-serif italic font-black mb-6' }, 'Каталог'),
-                        h('div', { className: 'grid gap-6' },
-                            CERTIFICATES[city].map(c => h('div', { key: c.id, onClick: () => { setSelected(c); setView('details'); haptic(); }, className: 'rounded-[2rem] overflow-hidden border shadow-sm' },
-                                h('img', { src: c.img, className: 'h-48 w-full object-cover' }),
-                                h('div', { className: 'p-6' },
-                                    h('div', { className: 'flex justify-between items-center mb-1' },
-                                        h('h3', { className: 'text-xl font-black' }, c.name),
-                                        h('span', { className: 'font-black' }, c.price + ' ₽')
-                                    ),
-                                    h('p', { className: 'text-xs text-gray-400' }, c.desc)
-                                )
-                            ))
-                        )
-                    ),
-
-                    view === 'details' && selected && h('div', { className: 'animate-fade' },
-                        h('img', { src: selected.img, className: 'w-full aspect-[3/4] object-cover rounded-[2.5rem] mb-6 shadow-xl' }),
-                        h('h2', { className: 'text-4xl font-serif italic font-black mb-4' }, selected.name),
-                        h('div', { className: 'bg-gray-50 p-6 rounded-3xl mb-6' },
-                            h('p', { className: 'text-[10px] font-black text-gray-300 uppercase tracking-widest mb-4' }, 'В стоимость входит'),
-                            selected.includes.map((inc, i) => h('p', { key: i, className: 'text-sm font-bold flex gap-2 mb-2' }, h('span', null, '—'), h('span', null, inc)))
-                        ),
-                        h('button', { onClick: () => setView('checkout'), className: 'w-full py-6 bg-black text-white rounded-2xl font-black uppercase text-xs tracking-widest' }, 'Оформить за ' + selected.price + ' ₽')
-                    ),
-
-                    view === 'checkout' && h('div', { className: 'animate-fade max-w-sm mx-auto' },
-                        h('h2', { className: 'text-3xl font-serif italic font-black text-center mb-8' }, 'Оформление'),
-                        h('div', { className: 'space-y-4 mb-8' },
-                            h('input', { placeholder: 'От кого', className: 'w-full p-5 bg-gray-50 rounded-2xl outline-none font-bold' }),
-                            h('input', { placeholder: 'Кому', className: 'w-full p-5 bg-gray-50 rounded-2xl outline-none font-bold' }),
-                            h('textarea', { placeholder: 'Пожелание', className: 'w-full p-5 bg-gray-50 rounded-2xl outline-none font-bold h-32' })
-                        ),
-                        h('button', { onClick: handleBuy, className: 'w-full py-6 bg-black text-white rounded-2xl font-black uppercase text-xs tracking-widest' }, 'Купить сертификат')
-                    ),
-
-                    view === 'payment' && h('div', { className: 'flex flex-col items-center justify-center py-20 animate-fade' },
-                        h('div', { className: 'spinner mb-6' }),
-                        h('h2', { className: 'text-xl font-black uppercase' }, 'Обработка платежа'),
-                        h('p', { className: 'text-gray-400 text-sm mt-2' }, 'Ожидайте ответа банка...')
-                    ),
-
-                    view === 'success' && h('div', { className: 'text-center py-10 animate-fade' },
-                        h('div', { className: 'w-20 h-20 bg-green-500 rounded-full flex items-center justify-center text-white mx-auto mb-6 shadow-lg' },
-                            h('svg', { className: 'w-10 h-10', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, h('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: 4, d: 'M5 13l4 4L19 7' }))
-                        ),
-                        h('h2', { className: 'text-4xl font-serif italic font-black mb-4' }, 'Успешно!'),
-                        h('p', { className: 'text-gray-400 mb-10' }, 'Сертификат добавлен в архив'),
-                        h('div', { className: 'bg-black text-white p-8 rounded-[2rem] font-mono text-3xl tracking-widest mb-10' }, vault[0].id),
-                        h('button', { onClick: () => setView('vault'), className: 'w-full py-6 bg-black text-white rounded-2xl font-black uppercase text-xs tracking-widest' }, 'Мои покупки')
-                    ),
-
-                    view === 'vault' && h('div', { className: 'animate-fade' },
-                        h('h2', { className: 'text-4xl font-serif italic font-black mb-8' }, 'Архив'),
-                        vault.length === 0 ? h('p', { className: 'text-gray-300 italic text-center py-20' }, 'У вас пока нет покупок') :
-                        h('div', { className: 'space-y-6' },
-                            vault.map(o => h('div', { key: o.id, className: `p-8 border rounded-[2.5rem] ${o.status === 'used' ? 'opacity-30' : 'bg-white shadow-sm'}` },
-                                h('div', { className: 'flex justify-between items-start mb-4' },
-                                    h('div', null,
-                                        h('p', { className: 'text-[10px] text-gray-400 font-bold uppercase' }, o.date),
-                                        h('h3', { className: 'text-2xl font-black' }, '«' + o.name + '»')
-                                    ),
-                                    h('span', { className: 'text-[10px] bg-gray-100 px-2 py-1 rounded-md font-black' }, o.city)
-                                ),
-                                h('div', { className: 'p-5 border-2 border-dashed rounded-2xl text-center mb-4' },
-                                    h('p', { className: 'font-mono font-black text-xl tracking-widest' }, o.id)
-                                ),
-                                h('p', { className: 'text-[9px] text-gray-300 font-bold uppercase tracking-widest text-center' }, 'Действителен до ' + new Date(o.expiry).toLocaleDateString())
-                            ))
-                        )
-                    )
-                ),
-                ['catalog', 'details', 'vault'].includes(view) && nav
-            );
-        }
-
-        // Рендер
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(h(App));
-    </script>
+  <div id="root"></div>
+  <script>
+    const h = React.createElement;
+    const { useState, useEffect } = React;
+    
+    function App() {
+      const [city, setCity] = useState(null);
+      const [view, setView] = useState('catalog');
+      
+      if (!city) {
+        return h('div', { className: 'flex flex-col items-center justify-center min-h-screen px-10 text-center' },
+          h('h1', { className: 'text-3xl font-bold mb-8' }, 'Q-PIC'),
+          h('p', { className: 'text-gray-500 mb-12' }, 'Сертификаты'),
+          h('div', { className: 'w-full space-y-4' },
+            h('button', { onClick: () => setCity('MSK'), className: 'w-full py-4 border-2 border-black rounded-lg font-bold' }, 'МОСКВА'),
+            h('button', { onClick: () => setCity('SPB'), className: 'w-full py-4 border-2 border-black rounded-lg font-bold' }, 'ПЕТЕРБУРГ')
+          )
+        );
+      }
+      
+      return h('div', { className: 'flex flex-col items-center justify-center min-h-screen px-10 text-center' },
+        h('h1', { className: 'text-3xl font-bold mb-4' }, 'Q-PIC'),
+        h('p', { className: 'text-gray-500 mb-12' }, `Выбран: ${city}`),
+        h('button', { onClick: () => setCity(null), className: 'py-2 px-6 bg-black text-white rounded-lg' }, 'Назад')
+      );
+    }
+    
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(h(App));
+  </script>
 </body>
 </html>
