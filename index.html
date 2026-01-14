@@ -25,7 +25,6 @@
     "react-dom/client": "https://esm.sh/react-dom@19.0.0/client?deps=react@19.0.0",
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
     "react/": "https://esm.sh/react@^19.2.3/",
-    "@google/genai": "https://esm.sh/@google/genai@^1.35.0",
     "vite": "https://esm.sh/vite@^7.3.1",
     "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
   }
@@ -35,7 +34,17 @@
         body { font-family: 'Inter', sans-serif; background: #ffffff; color: #000; margin: 0; -webkit-tap-highlight-color: transparent; }
         .font-serif { font-family: 'Playfair Display', serif; }
         #root { max-width: 450px; margin: 0 auto; min-height: 100vh; position: relative; }
-        #loading-screen { position: fixed; inset: 0; background: white; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.4s ease; }
+        #loading-screen { 
+            position: fixed; 
+            inset: 0; 
+            background: white; 
+            z-index: 9999; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            transition: opacity 0.4s ease; 
+        }
         @keyframes spin { to { transform: rotate(360deg); } }
         .spinner { width: 24px; height: 24px; border: 2px solid #f0f0f0; border-top-color: #000; border-radius: 50%; animation: spin 0.8s linear infinite; }
     </style>
@@ -46,7 +55,7 @@
             <span style="color:white; font-family:'Playfair Display'; font-size:28px; font-style:italic; font-weight:900;">Q</span>
         </div>
         <div class="spinner"></div>
-        <p style="margin-top: 15px; font-size: 10px; font-weight: 900; letter-spacing: 0.2em; color: #ccc;">ЗАГРУЗКА</p>
+        <p style="margin-top: 15px; font-size: 10px; font-weight: 900; letter-spacing: 0.2em; color: #ccc; text-transform: uppercase;">ЗАГРУЗКА</p>
     </div>
     <div id="root"></div>
     <script type="module" src="index.tsx"></script>
