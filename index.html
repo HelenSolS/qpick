@@ -202,7 +202,7 @@
                             vault.map(o => h('div', { key: o.id, className: `p-8 border rounded-[2.5rem] ${o.status === 'used' ? 'opacity-30' : 'bg-white shadow-sm'}` },
                                 h('div', { className: 'flex justify-between items-start mb-4' },
                                     h('div', null,
-                                        h('p', { className: 'text-[10px] text-gray-400 font-bold uppercase' }, o.date),
+                                        h('p', { className: 'text-[10px] text-gray-400 font-bold uppercase' }, o.date), 
                                         h('h3', { className: 'text-2xl font-black' }, '«' + o.name + '»')
                                     ),
                                     h('span', { className: 'text-[10px] bg-gray-100 px-2 py-1 rounded-md font-black' }, o.city)
