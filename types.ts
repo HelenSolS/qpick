@@ -16,6 +16,7 @@ export interface OrderDetails {
   orderId: string;
   transactionId: string;
   purchaseDate: string;
+  expiryDate: string; // ISO format date string
   certificateId: string;
   certName: string;
   city: City;
@@ -24,11 +25,7 @@ export interface OrderDetails {
   recipientName: string;
   paymentMethod: string;
   greetingMessage: string;
-}
-
-export interface GreetingTone {
-  id: string;
-  label: string;
+  status: 'active' | 'used';
 }
 
 export interface TelegramWebApp {
