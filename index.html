@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -106,9 +107,6 @@
                 }, 2500);
             };
 
-                  // Проверка валидации формы
-      const isFormValid = form.sender.trim() !== '' && form.recipient.trim() !== '';
-
             // Рендер: Выбор города
             if (!city && view !== 'vault') {
                 return h('div', { className: 'flex flex-col items-center justify-center min-h-screen px-10 text-center animate-fade' },
@@ -118,8 +116,8 @@
                     h('h1', { className: 'text-3xl font-black mb-2 uppercase' }, 'Q-PIC'),
                     h('p', { className: 'text-gray-400 text-[10px] uppercase tracking-[0.4em] mb-12' }, 'Сертификаты'),
                     h('div', { className: 'w-full space-y-4' },
-                        h('button', { onClick: () => { setCity('MSK') setSelected(null); setForm({ sender: '', recipient: '', message: '' }); setView('catalog');; haptic(); }, className: 'w-full py-5 border-2 border-black rounded-2xl font-black text-lg active:bg-black active:text-white transition-all' }, 'МОСКВА'),
-                        h('button', { onClick: () => { setCity('SPB') setSelected(null); setForm({ sender: '', recipient: '', message: '' }); setView('catalog');; haptic(); }, className: 'w-full py-5 border-2 border-black rounded-2xl font-black text-lg active:bg-black active:text-white transition-all' }, 'ПЕТЕРБУРГ'),
+                        h('button', { onClick: () => { setCity('MSK'); haptic(); }, className: 'w-full py-5 border-2 border-black rounded-2xl font-black text-lg active:bg-black active:text-white transition-all' }, 'МОСКВА'),
+                        h('button', { onClick: () => { setCity('SPB'); haptic(); }, className: 'w-full py-5 border-2 border-black rounded-2xl font-black text-lg active:bg-black active:text-white transition-all' }, 'ПЕТЕРБУРГ'),
                         h('button', { onClick: () => setView('vault'), className: 'pt-6 text-[11px] font-black text-gray-300 uppercase tracking-widest block mx-auto' }, 'Мои покупки')
                     )
                 );
@@ -175,11 +173,11 @@
                     view === 'checkout' && h('div', { className: 'animate-fade max-w-sm mx-auto' },
                         h('h2', { className: 'text-3xl font-serif italic font-black text-center mb-8' }, 'Оформление'),
                         h('div', { className: 'space-y-4 mb-8' },
-                            h('input', { onClick: haplaceholder: 'От кого', value: form.sender, onChange: (e) => setForm({ ...form, sender: e.target.value })ndleBuy, disabled, className: 'w-full p-5 bg-gray-50 rounded-2xl outline-none font-bold' }),
-                            h('input', { onClick: haplaceholder: 'Кому', value: form.recipient, onChange: (e) => setForm({ ...form, recipient: e.target.value })placeholder: 'От кого', value: form.sender, onChange: (e) => setForm({ ...form, sender: e.target.value })ndleBuy, disabled, className: 'w-full p-5 bg-gray-50 rounded-2xl outline-none font-bold' }),
-                            h('textarea', { onClick: haplaceholder: 'Пожелание', value: form.message, onChange: (e) => setForm({ ...form, message: e.target.value })placeholder: 'Кому', value: form.recipient, onChange: (e) => setForm({ ...form, recipient: e.target.value })placeholder: 'От кого', value: form.sender, onChange: (e) => setForm({ ...form, sender: e.target.value })ndleBuy, disabled, className: 'w-full p-5 bg-gray-50 rounded-2xl outline-none font-bold h-32' })
+                            h('input', { placeholder: 'От кого', className: 'w-full p-5 bg-gray-50 rounded-2xl outline-none font-bold' }),
+                            h('input', { placeholder: 'Кому', className: 'w-full p-5 bg-gray-50 rounded-2xl outline-none font-bold' }),
+                            h('textarea', { placeholder: 'Пожелание', className: 'w-full p-5 bg-gray-50 rounded-2xl outline-none font-bold h-32' })
                         ),
-                        h('button', { onClick: handleBuy, disabled: !isFormValid,, className: 'w-full py-6 bg-black text-white rounded-2xl font-black uppercase text-xs tracking-widest' }, 'Купить сертификат')
+                        h('button', { onClick: handleBuy, className: 'w-full py-6 bg-black text-white rounded-2xl font-black uppercase text-xs tracking-widest' }, 'Купить сертификат')
                     ),
 
                     view === 'payment' && h('div', { className: 'flex flex-col items-center justify-center py-20 animate-fade' },
@@ -205,7 +203,7 @@
                             vault.map(o => h('div', { key: o.id, className: `p-8 border rounded-[2.5rem] ${o.status === 'used' ? 'opacity-30' : 'bg-white shadow-sm'}` },
                                 h('div', { className: 'flex justify-between items-start mb-4' },
                                     h('div', null,
-                                        h('p', { className: 'text-[10px] text-gray-400 font-bold uppercase' }, o.date), 
+                                        h('p', { className: 'text-[10px] text-gray-400 font-bold uppercase' }, o.date),
                                         h('h3', { className: 'text-2xl font-black' }, '«' + o.name + '»')
                                     ),
                                     h('span', { className: 'text-[10px] bg-gray-100 px-2 py-1 rounded-md font-black' }, o.city)
