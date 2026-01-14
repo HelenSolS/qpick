@@ -106,6 +106,9 @@
                 }, 2500);
             };
 
+                  // Проверка валидации формы
+      const isFormValid = form.sender.trim() !== '' && form.recipient.trim() !== '';
+
             // Рендер: Выбор города
             if (!city && view !== 'vault') {
                 return h('div', { className: 'flex flex-col items-center justify-center min-h-screen px-10 text-center animate-fade' },
@@ -115,8 +118,8 @@
                     h('h1', { className: 'text-3xl font-black mb-2 uppercase' }, 'Q-PIC'),
                     h('p', { className: 'text-gray-400 text-[10px] uppercase tracking-[0.4em] mb-12' }, 'Сертификаты'),
                     h('div', { className: 'w-full space-y-4' },
-                        h('button', { onClick: () => { setCity('MSK'); haptic(); }, className: 'w-full py-5 border-2 border-black rounded-2xl font-black text-lg active:bg-black active:text-white transition-all' }, 'МОСКВА'),
-                        h('button', { onClick: () => { setCity('SPB'); haptic(); }, className: 'w-full py-5 border-2 border-black rounded-2xl font-black text-lg active:bg-black active:text-white transition-all' }, 'ПЕТЕРБУРГ'),
+                        h('button', { onClick: () => { setCity('MSK') setSelected(null); setForm({ sender: '', recipient: '', message: '' }); setView('catalog');; haptic(); }, className: 'w-full py-5 border-2 border-black rounded-2xl font-black text-lg active:bg-black active:text-white transition-all' }, 'МОСКВА'),
+                        h('button', { onClick: () => { setCity('SPB') setSelected(null); setForm({ sender: '', recipient: '', message: '' }); setView('catalog');; haptic(); }, className: 'w-full py-5 border-2 border-black rounded-2xl font-black text-lg active:bg-black active:text-white transition-all' }, 'ПЕТЕРБУРГ'),
                         h('button', { onClick: () => setView('vault'), className: 'pt-6 text-[11px] font-black text-gray-300 uppercase tracking-widest block mx-auto' }, 'Мои покупки')
                     )
                 );
@@ -176,7 +179,7 @@
                             h('input', { placeholder: 'Кому', className: 'w-full p-5 bg-gray-50 rounded-2xl outline-none font-bold' }),
                             h('textarea', { placeholder: 'Пожелание', className: 'w-full p-5 bg-gray-50 rounded-2xl outline-none font-bold h-32' })
                         ),
-                        h('button', { onClick: handleBuy, className: 'w-full py-6 bg-black text-white rounded-2xl font-black uppercase text-xs tracking-widest' }, 'Купить сертификат')
+                        h('button', { onClick: handleBuy disabled: !isFormValid,, className: 'w-full py-6 bg-black text-white rounded-2xl font-black uppercase text-xs tracking-widest' }, 'Купить сертификат')
                     ),
 
                     view === 'payment' && h('div', { className: 'flex flex-col items-center justify-center py-20 animate-fade' },
