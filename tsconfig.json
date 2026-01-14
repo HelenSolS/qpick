@@ -15,7 +15,9 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
+        "types": ["node"],
     "jsx": "react-jsx"
+        "allowImportingTsExtensions": true
   },
   "include": ["./**/*.ts", "./**/*.tsx"]
 }
