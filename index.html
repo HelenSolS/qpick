@@ -66,6 +66,14 @@
     <div id="root"></div>
     <!-- Контейнер для рендера PDF -->
     <div id="pdf-export-container"></div>
-    <script type="module" src="./index.tsx"></script>
+    <!-- React + библиотеки -->
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<!-- Наш код без TypeScript -->
+<script src="./index.js"></script>
+
 </body>
 </html>
