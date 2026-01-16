@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
-import { CERTIFICATES, STORAGE_KEY, DESIGNS } from './constants';
+// Добавлено расширение .ts, иначе браузер не найдет файл без сборщика
+import { CERTIFICATES, STORAGE_KEY, DESIGNS } from './constants.ts';
 
 declare const html2canvas: any;
 declare const jspdf: any;
@@ -46,7 +47,6 @@ function App() {
     const handleBuy = () => {
         haptic('medium');
         setView('payment');
-        // Эмуляция перехода на ЮKassa
         setTimeout(() => {
             const now = new Date();
             const expiry = new Date();
@@ -82,7 +82,6 @@ function App() {
         const container = document.getElementById('pdf-export-container');
         if (!container) return;
 
-        // Верстка PDF (ширина 800px для высокого качества при масштабировании)
         container.innerHTML = `
             <div style="padding: 60px; background: white; border: 30px solid black; font-family: 'Inter', sans-serif; position: relative; min-height: 1050px; width: 800px; box-sizing: border-box;">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 60px;">
@@ -141,7 +140,11 @@ function App() {
                 backgroundColor: '#ffffff'
             });
             const imgData = canvas.toDataURL('image/jpeg', 0.95);
-            const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
+            
+            // В UMD версии jspdf может быть доступен как window.jspdf.jsPDF
+            const jsPDFClass = (window as any).jspdf?.jsPDF || jspdf.jsPDF;
+            const pdf = new jsPDFClass('p', 'mm', 'a4');
+            
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
             pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
@@ -169,7 +172,6 @@ function App() {
         window.open(`https://t.me/HelenSolSol?text=${text}`, '_blank');
     };
 
-    // Основной роутинг видов
     const Header = () => (
         <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b px-6 py-4 flex justify-between items-center">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => { setView('catalog'); if(!city) setView('catalog'); }}>
