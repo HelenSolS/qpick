@@ -90,6 +90,19 @@ function App() {
       setVault(updatedVault);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedVault));
       setView('success');
+      if (tg && tg.sendData) {
+        tg.sendData(JSON.stringify({
+          id: newOrder.id,
+          name: newOrder.name,
+          city: newOrder.city,
+          sender: newOrder.sender,
+          recipient: newOrder.recipient,
+          message: newOrder.message,
+          price: newOrder.price,
+          expiry: newOrder.expiry
+      }));
+}
+
       haptic('heavy');
     }, 2000);
   }
