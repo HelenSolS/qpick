@@ -65,7 +65,7 @@ function App() {
 
   function handleBuy() {
     haptic('medium');
-    setView('payment');
+    setView('success');
 
     setTimeout(function () {
       var now = new Date();
