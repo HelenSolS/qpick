@@ -92,6 +92,13 @@ function App() {
             setVault(updatedVault);
             localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedVault));
             setView('success');
+              // Отправляем сертификат на вебхук
+  const webhookUrl = `${import.meta.env.VITE_API_BASE}${import.meta.env.VITE_CREATE_CERTIFICATE_PATH}`;
+  fetch(webhookUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(newOrder)
+  }).catch(err => console.log('Certificate sent to webhook:', err));
             haptic('heavy');
         }, 2000);
     };
