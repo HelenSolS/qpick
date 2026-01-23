@@ -64,7 +64,7 @@ function App() {
         if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred(type);
     };
 
-    const handleBuy = () => {
+    const handleBuy = async () => {
         haptic('medium');
         setView('payment');
         
@@ -92,16 +92,31 @@ function App() {
             setVault(updatedVault);
             localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedVault));
             setView('success');
-              // Отправляем сертификат на вебхук
-  const webhookUrl = `${import.meta.env.VITE_API_BASE}${import.meta.env.VITE_CREATE_CERTIFICATE_PATH}`;
-  fetch(webhookUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(newOrder)
-  }).catch(err => console.log('Certificate sent to webhook:', err));
+              await sendToWebhook(newOrder, 'purchase');
             haptic('heavy');
         }, 2000);
     };
+
+ const sendToWebhook = async (data: any, source: string = 'purchase') => {
+    try {
+      const webhookUrl = `${import.meta.env.VITE_API_BASE}${import.meta.env.VITE_CREATE_CERTIFICATE_PATH}`;
+      console.log(`[${source}] Sending to webhook:`, webhookUrl, data);
+      
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      
+      if (!response.ok) {
+        console.warn(`[${source}] Webhook response: ${response.status}`);
+      } else {
+        console.log(`[${source}] Webhook sent successfully`);
+      }
+    } catch (error) {
+      console.error(`[${source}] Webhook error:`, error);
+    }
+  };
 
     const downloadPDF = async (order: any) => {
         setIsGeneratingPdf(true);
@@ -164,17 +179,11 @@ function App() {
         }
     };
 
-    const notifyAdmin = (order: any) => {
+    const notifyAdminasync  = (order: any) => {
         const text = encodeURIComponent(`🔔 НОВЫЙ СЕРТИФИКАТ\nКод: ${order.id}\nТариф: ${order.name}\nГород: ${order.city}\nКому: ${order.recipient}`);
         window.open(`https://t.me/HelenSolSol?text=${text}`, '_blank');
-          // Отправляем на вебхук в БД
-  const webhookUrl = `${import.meta.env.VITE_API_BASE}${import.meta.env.VITE_CREATE_CERTIFICATE_PATH}`;
-  fetch(webhookUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(order)
-  }).catch(err => console.log('Webhook sent:', err));
-    };
+          await sendToWebhook(order, 'notify');
+      };
 
     // Экран выбора города
     if (!city && view !== 'vault') {
