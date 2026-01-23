@@ -38,12 +38,64 @@ function App() {
     const [form, setForm] = useState({ sender: '', recipient: '', message: '' });
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
-    const tg = (window as any).Telegram?.WebApp || null;
+
+        const tg = (window as any).Telegram?.WebApp || null;
+     // Проверка пользователя в БД при входе
+ const initializeUser = async () => {
+   if (!tg?.initDataUnsafe?.user) {
+     console.warn('[init] No Telegram user data available');
+     return;
+   }
+
+   const user = tg.initDataUnsafe.user;
+   const userData = {
+     telegram_id: user.id,
+     first_name: user.first_name || '',
+     last_name: user.last_name || '',
+     username: user.username || '',
+     language_code: user.language_code || 'ru',
+     timestamp: new Date().toISOString()
+   };
+
+   try {
+     const webhookUrl = `${import.meta.env.VITE_API_BASE}${import.meta.env.VITE_CREATE_CERTIFICATE_PATH}`;
+     console.log('[init] Checking user in database:', userData);
+     
+     const response = await fetch(webhookUrl, {
+       method: 'POST',
+       headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify({
+         action: 'init_user',
+         user: userData
+       })
+     });
+
+     if (response.ok) {
+       const result = await response.json();
+       console.log('[init] User initialized:', result);
+       
+       // Если есть история покупок, загружаем её
+       if (result.purchases && result.purchases.length > 0) {
+         console.log('[init] Loading purchase history:', result.purchases.length);
+         // TODO: Здесь можно загрузить историю в vault
+       }
+     } else {
+       console.warn('[init] User initialization failed:', response.status);
+     }
+   } catch (error) {
+     console.error('[init] User initialization error:', error);
+   }
+ };
+
+
 
     useEffect(() => {
         if (tg) {
             tg.ready();
             tg.expand();
+            
+    // Проверяем пользователя в БД при запуске
+    initializeUser();
         }
         
         // Загрузка сохраненных покупок
