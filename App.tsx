@@ -19,7 +19,6 @@ const App: React.FC = () => {
     message: ''
   });
 
-  const tg = window.Telegram?.WebApp;
   const identifyClient = async () => {
   try {
     const tgUser = tg?.initDataUnsafe?.user;
@@ -34,7 +33,7 @@ const App: React.FC = () => {
     };
 
     const res = await fetch(
-      'https://n8n.neyronikol.ru/webhook-test/80385ffa-6c51-49ba-8e66-a17cf24189b5',
+      'https://n8n.neyronikol.ru/webhook/80385ffa-6c51-49ba-8e66-a17cf24189b5',
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
