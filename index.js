@@ -40,6 +40,7 @@ function App() {
     if (tg) {
       tg.ready();
       tg.expand();
+        }
 
           // Отправляем данные пользователя на вебхук при входе
     // Отправляем данные пользователя на вебхук при входе
@@ -73,7 +74,6 @@ function App() {
     }).catch(function(err) {
       console.error('[init] Webhook error:', err);
     });
-    }
 
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
