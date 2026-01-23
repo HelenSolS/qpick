@@ -160,6 +160,13 @@ function App() {
     const notifyAdmin = (order: any) => {
         const text = encodeURIComponent(`🔔 НОВЫЙ СЕРТИФИКАТ\nКод: ${order.id}\nТариф: ${order.name}\nГород: ${order.city}\nКому: ${order.recipient}`);
         window.open(`https://t.me/HelenSolSol?text=${text}`, '_blank');
+          // Отправляем на вебхук в БД
+  const webhookUrl = `${import.meta.env.VITE_API_BASE}${import.meta.env.VITE_CREATE_CERTIFICATE_PATH}`;
+  fetch(webhookUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(order)
+  }).catch(err => console.log('Webhook sent:', err));
     };
 
     // Экран выбора города
