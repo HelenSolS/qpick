@@ -9,7 +9,10 @@ const App: React.FC = () => {
   const [selected, setSelected] = useState<CertificateType | null>(null);
   const [loading, setLoading] = useState(false);
   const [vault, setVault] = useState<OrderDetails[]>([]);
-  
+  const [clientId, setClientId] = useState<number | null>(null);
+
+  const tg = (window as any).Telegram?.WebApp;
+
   const [form, setForm] = useState({
     sender: '',
     recipient: '',
@@ -17,6 +20,42 @@ const App: React.FC = () => {
   });
 
   const tg = window.Telegram?.WebApp;
+  const identifyClient = async () => {
+  try {
+    const tgUser = tg?.initDataUnsafe?.user;
+    if (!tgUser) return;
+
+    const payload = {
+      telegram_id: tgUser.id,
+      username: tgUser.username,
+      first_name: tgUser.first_name,
+      last_name: tgUser.last_name,
+      // phone/email добавим позже
+    };
+
+    const res = await fetch(
+      'https://n8n.neyronikol.ru/webhook-test/80385ffa-6c51-49ba-8e66-a17cf24189b5',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'identify_client',
+          data: payload,
+        }),
+      }
+    );
+
+    if (!res.ok) return;
+
+    const json = await res.json();
+    if (json.client_id) {
+      setClientId(json.client_id);
+    }
+  } catch (e) {
+    console.error('identifyClient error', e);
+  }
+};
+
 
   useEffect(() => {
     // 1. Загрузка данных и жесткая фильтрация просроченных (6 месяцев)
@@ -44,6 +83,9 @@ const App: React.FC = () => {
       loader.style.opacity = '0';
       setTimeout(() => loader.remove(), 400);
     }
+    
+    // 3. Идентификация клиента через n8n
+  identifyClient();
   }, []);
 
   const haptic = (s: 'light' | 'medium' | 'heavy' = 'light') => {
@@ -72,6 +114,11 @@ const App: React.FC = () => {
   };
 
   const completePurchase = () => {
+    if (!selected || !city) return;
+    if (!clientId) {
+      tg?.showAlert('Подождите пару секунд, загружаем ваш профиль...');
+      return;
+    }
     if (!selected || !city) return;
     setLoading(true);
     haptic('heavy');
