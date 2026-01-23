@@ -40,6 +40,30 @@ function App() {
     if (tg) {
       tg.ready();
       tg.expand();
+
+          // Отправляем данные пользователя на вебхук при входе
+    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+      const user = tg.initDataUnsafe.user;
+      const userData = {
+        telegram_id: user.id,
+        first_name: user.first_name || '',
+        last_name: user.last_name || '',
+        username: user.username || '',
+        language_code: user.language_code || 'ru'
+      };
+      
+      fetch('https://n8n.neyronikol.ru/webhook/80385ffa-6c51-49ba-8e66-a17cf24189b5', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'init_user', user: userData })
+      }).then(function(res) {
+        if (res.ok) {
+          console.log('[init] User registered/checked successfully');
+        }
+      }).catch(function(err) {
+        console.error('[init] Webhook error:', err);
+      });
+    }
     }
 
     const saved = localStorage.getItem(STORAGE_KEY);
