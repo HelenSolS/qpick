@@ -19,10 +19,8 @@ const App: React.FC = () => {
     message: ''
   });
 
-  // Получаем URL из .env
   const WEBHOOK_URL = `${import.meta.env.VITE_API_BASE}${import.meta.env.VITE_INIT_USER_PATH}`;
 
-  // Инициализация пользователя при загрузке
   useEffect(() => {
     if (tg) {
       tg.ready();
@@ -34,7 +32,6 @@ const App: React.FC = () => {
     loadVaultFromStorage();
   }, []);
 
-  // Загрузка хранилища из localStorage (фильтрация истекших)
   const loadVaultFromStorage = () => {
     const saved = localStorage.getItem('qpic_storage_v1');
     if (saved) {
@@ -46,7 +43,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Идентификация клиента
   const identifyClient = async () => {
     try {
       const tgUser = tg?.initDataUnsafe?.user;
@@ -75,7 +71,6 @@ const App: React.FC = () => {
         setClientId(json.client_id);
       }
 
-      // Загружаем историю из БД если есть
       if (json.certificates && json.certificates.length > 0) {
         setVault(json.certificates);
       }
@@ -84,7 +79,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Покупка сертификата
   const handlePurchase = async () => {
     if (!selected || !city || !clientId) return;
 
@@ -115,7 +109,6 @@ const App: React.FC = () => {
       if (res.ok) {
         const json = await res.json();
 
-        // Добавляем в локальное хранилище
         const now = new Date();
         const expiry = new Date();
         expiry.setMonth(expiry.getMonth() + 6);
@@ -123,6 +116,7 @@ const App: React.FC = () => {
         const newOrder = {
           id: json.certificate?.code || 'QP-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
           orderId: json.certificate?.id,
+          transactionId: json.certificate?.code,
           name: selected.name,
           price: selected.price,
           city: city,
@@ -154,7 +148,6 @@ const App: React.FC = () => {
 
   const certificates = city === 'MSK' ? CERTIFICATES_MSK : CERTIFICATES_SPB;
 
-  // Экран выбора города
   if (!city && view !== 'vault') {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen px-10 text-center animate-fade">
@@ -187,7 +180,6 @@ const App: React.FC = () => {
     );
   }
 
-  // Header
   const header = (
     <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b px-6 py-4 flex justify-between items-center">
       <div className="flex items-center gap-2" onClick={() => setView('catalog')}>
@@ -205,12 +197,11 @@ const App: React.FC = () => {
     </header>
   );
 
-  // Нижняя навигация
   const nav = (
     <nav className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[180px] bg-black/95 rounded-full p-2 flex justify-between items-center z-50 shadow-2xl">
       <button 
         onClick={() => { setView('catalog'); haptic(); }} 
-        className={\`p-3 rounded-full transition-all \${view !== 'vault' ? 'bg-white text-black' : 'text-white/30'}\`}
+        className={`p-3 rounded-full transition-all ${view !== 'vault' ? 'bg-white text-black' : 'text-white/30'}`}
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
@@ -218,7 +209,7 @@ const App: React.FC = () => {
       </button>
       <button 
         onClick={() => { setView('vault'); haptic(); }} 
-        className={\`p-3 rounded-full transition-all \${view === 'vault' ? 'bg-white text-black' : 'text-white/30'}\`}
+        className={`p-3 rounded-full transition-all ${view === 'vault' ? 'bg-white text-black' : 'text-white/30'}`}
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -232,7 +223,6 @@ const App: React.FC = () => {
       {header}
 
       <main className="px-6 py-8">
-        {/* Каталог */}
         {view === 'catalog' && (
           <div className="animate-fade">
             <h2 className="text-4xl font-serif italic font-black mb-6">Каталог</h2>
@@ -257,7 +247,6 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* Детали сертификата */}
         {view === 'details' && selected && (
           <div className="animate-fade">
             <img src={selected.image} className="w-full aspect-[3/4] object-cover rounded-[2.5rem] mb-6 shadow-xl" alt={selected.name} />
@@ -280,12 +269,10 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* Оформление */}
         {view === 'checkout' && (
           <div className="animate-fade max-w-sm mx-auto">
             <h2 className="text-3xl font-serif italic font-black text-center mb-8">Оформление</h2>
 
-            {/* Выбор дизайна */}
             <div className="mb-8">
               <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-4">Выберите дизайн</p>
               <div className="grid grid-cols-3 gap-3">
@@ -293,7 +280,7 @@ const App: React.FC = () => {
                   <div 
                     key={d.id}
                     onClick={() => { setSelectedDesign(d); haptic(); }}
-                    className={\`rounded-xl overflow-hidden border-2 cursor-pointer \${selectedDesign?.id === d.id ? 'border-black' : 'border-gray-200'}\`}
+                    className={`rounded-xl overflow-hidden border-2 cursor-pointer ${selectedDesign?.id === d.id ? 'border-black' : 'border-gray-200'}`}
                   >
                     <img src={d.img} className="w-full aspect-square object-cover" alt={d.name} />
                     <p className="text-[8px] font-bold text-center py-1">{d.name}</p>
@@ -302,7 +289,6 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            {/* Форма */}
             <div className="space-y-4 mb-8">
               <input 
                 placeholder="От кого" 
@@ -333,7 +319,6 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* Обработка платежа */}
         {view === 'payment' && (
           <div className="flex flex-col items-center justify-center py-20 animate-fade">
             <div className="spinner mb-6"></div>
@@ -342,7 +327,6 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* Успех */}
         {view === 'success' && vault.length > 0 && (
           <div className="text-center py-10 animate-fade">
             <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center text-white mx-auto mb-6 shadow-lg">
@@ -364,7 +348,6 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* Архив */}
         {view === 'vault' && (
           <div className="animate-fade">
             <h2 className="text-4xl font-serif italic font-black mb-8">Архив</h2>
@@ -375,7 +358,7 @@ const App: React.FC = () => {
                 {vault.map(o => (
                   <div 
                     key={o.id} 
-                    className={\`p-8 border rounded-[2.5rem] \${o.status === 'used' ? 'opacity-30' : 'bg-white shadow-sm'}\`}
+                    className={`p-8 border rounded-[2.5rem] ${o.status === 'used' ? 'opacity-30' : 'bg-white shadow-sm'}`}
                   >
                     <div className="flex justify-between items-start mb-4">
                       <div>
