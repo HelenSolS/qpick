@@ -42,28 +42,37 @@ function App() {
       tg.expand();
 
           // Отправляем данные пользователя на вебхук при входе
-    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-      const user = tg.initDataUnsafe.user;
-      const userData = {
-        telegram_id: user.id,
-        first_name: user.first_name || '',
-        last_name: user.last_name || '',
-        username: user.username || '',
-        language_code: user.language_code || 'ru'
-      };
-      
-      fetch('https://n8n.neyronikol.ru/webhook/80385ffa-6c51-49ba-8e66-a17cf24189b5', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'init_user', user: userData })
-      }).then(function(res) {
-        if (res.ok) {
-          console.log('[init] User registered/checked successfully');
-        }
-      }).catch(function(err) {
-        console.error('[init] Webhook error:', err);
-      });
+    // Отправляем данные пользователя на вебхук при входе
+    var userData = {
+      source: 'web', // По умолчанию - обычный веб-сайт
+      timestamp: new Date().toISOString(),
+      session_id: Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+    };
+    
+    // Если есть данные Telegram пользователя - добавляем их
+    if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+      var user = tg.initDataUnsafe.user;
+      userData.source = 'telegram';
+      userData.telegram_id = user.id;
+      userData.first_name = user.first_name || '';
+      userData.last_name = user.last_name || '';
+      userData.username = user.username || '';
+      userData.language_code = user.language_code || 'ru';
     }
+    
+    fetch('https://n8n.neyronikol.ru/webhook/80385ffa-6c51-49ba-8e66-a17cf24189b5', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'init_user', user: userData })
+    }).then(function(res) {
+      if (res.ok) {
+        console.log('[init] User registered/checked successfully', userData);
+      } else {
+        console.warn('[init] Webhook response status:', res.status);
+      }
+    }).catch(function(err) {
+      console.error('[init] Webhook error:', err);
+    });
     }
 
     const saved = localStorage.getItem(STORAGE_KEY);
