@@ -274,4 +274,167 @@ function App() {
 
   // Рендер: Выбор города
   if (!city && view !== 'vault') {
-    return h(
+        return h('div', { style: { padding: '20px', minHeight: '100vh', background: '#f9f9f9' } },
+      h('h2', { style: { textAlign: 'center', marginBottom: '30px' } }, 'Выберите ваш город'),
+      h('div', { style: { display: 'flex', gap: '20px', justifyContent: 'center' } },
+        h('button', {
+          onClick: () => { setCity('MSK'); haptic(); },
+          style: { padding: '20px 40px', fontSize: '18px', background: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }
+        }, 'Москва'),
+        h('button', {
+          onClick: () => { setCity('SPB'); haptic(); },
+          style: { padding: '20px 40px', fontSize: '18px', background: '#2196F3', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }
+        }, 'Санкт-Петербург')
+      ),
+      h('div', { style: { textAlign: 'center', marginTop: '30px' } },
+        h('button', {
+          onClick: () => setView('vault'),
+          style: { padding: '10px 20px', background: '#fff', border: '1px solid #ddd', borderRadius: '4px', cursor: 'pointer' }
+        }, '📦 Мои сертификаты')
+      )
+    );
+  }
+
+  const certs = CERTIFICATES[city] || [];
+
+  if (view === 'vault') {
+    return h('div', { style: { padding: '20px', background: '#f9f9f9', minHeight: '100vh' } },
+      h('h2', { style: { textAlign: 'center' } }, '📦 Мои сертификаты'),
+      vault.length === 0
+        ? h('p', { style: { textAlign: 'center', color: '#999' } }, 'Пока нет активных сертификатов')
+        : h('div', { style: { marginTop: '20px' } },
+          vault.map(o =>
+            h('div', { key: o.id, style: { background: '#fff', padding: '20px', marginBottom: '20px', borderRadius: '8px', boxShadow: '0 2px 6px rgba(0,0,0,0.1)' } },
+              h('p', { style: { fontWeight: 'bold', marginBottom: '10px' } }, 'Сертификат: ' + o.name),
+              h('p', {}, 'Код: ' + o.id),
+              h('p', {}, 'Город: ' + o.city),
+              h('p', {}, 'Действителен до: ' + new Date(o.expiry).toLocaleDateString('ru-RU')),
+              h('button', {
+                onClick: () => downloadPDF(o),
+                disabled: isGeneratingPdf,
+                style: { marginTop: '10px', padding: '10px 20px', background: '#4CAF50', color: 'white', border: 'none', borderRadius: '4px', cursor: isGeneratingPdf ? 'not-allowed' : 'pointer' }
+              }, isGeneratingPdf ? 'Генерация...' : '📥 Скачать PDF')
+            )
+          )
+        ),
+      h('button', {
+        onClick: () => { setView('catalog'); setCity(null); },
+        style: { marginTop: '20px', padding: '10px 20px', background: '#fff', border: '1px solid #ddd', borderRadius: '4px', cursor: 'pointer' }
+      }, '← Назад')
+    );
+  }
+
+  if (view === 'catalog') {
+    return h('div', { style: { padding: '20px', background: '#f9f9f9', minHeight: '100vh' } },
+      h('h2', { style: { textAlign: 'center' } }, 'Каталог сертификатов — ' + city),
+      h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginTop: '20px' } },
+        certs.map(cert =>
+          h('div', { key: cert.id, onClick: () => { setSelected(cert); setView('details'); haptic(); }, style: { background: '#fff', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 6px rgba(0,0,0,0.1)', cursor: 'pointer' } },
+            h('h3', { style: { marginBottom: '10px' } }, cert.name),
+            h('p', {}, cert.time),
+            h('p', { style: { fontSize: '20px', fontWeight: 'bold', color: '#4CAF50' } }, '₽' + cert.price)
+          )
+        )
+      ),
+      h('button', {
+        onClick: () => setCity(null),
+        style: { marginTop: '20px', padding: '10px 20px', background: '#fff', border: '1px solid #ddd', borderRadius: '4px', cursor: 'pointer' }
+      }, '← Сменить город'),
+      h('button', {
+        onClick: () => setView('vault'),
+        style: { marginTop: '20px', marginLeft: '10px', padding: '10px 20px', background: '#fff', border: '1px solid #ddd', borderRadius: '4px', cursor: 'pointer' }
+      }, '📦 Мои сертификаты')
+    );
+  }
+
+  if (view === 'details' && selected) {
+    return h('div', { style: { padding: '20px', background: '#f9f9f9', minHeight: '100vh' } },
+      h('h2', {}, selected.name),
+      h('p', {}, selected.time),
+      h('p', { style: { fontSize: '24px', fontWeight: 'bold', color: '#4CAF50' } }, '₽' + selected.price),
+      h('ul', { style: { marginTop: '20px' } },
+        selected.includes.map((inc, i) => h('li', { key: i }, inc))
+      ),
+      h('button', {
+        onClick: () => { setView('checkout'); haptic(); },
+        style: { marginTop: '20px', padding: '15px 30px', fontSize: '18px', background: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }
+      }, 'Купить'),
+      h('button', {
+        onClick: () => { setView('catalog'); setSelected(null); },
+        style: { marginTop: '10px', marginLeft: '10px', padding: '10px 20px', background: '#fff', border: '1px solid #ddd', borderRadius: '4px', cursor: 'pointer' }
+      }, '← Назад')
+    );
+  }
+
+  if (view === 'checkout' && selected) {
+    return h('div', { style: { padding: '20px', background: '#f9f9f9', minHeight: '100vh' } },
+      h('h2', {}, 'Оформление сертификата'),
+      h('p', { style: { marginBottom: '20px' } }, selected.name + ' — ₽' + selected.price),
+      h('div', { style: { marginBottom: '15px' } },
+        h('label', { style: { display: 'block', marginBottom: '5px' } }, 'От кого:'),
+        h('input', {
+          type: 'text',
+          value: form.sender,
+          onInput: (e) => setForm({ ...form, sender: e.target.value }),
+          placeholder: 'Ваше имя',
+          style: { width: '100%', padding: '10px', fontSize: '16px', borderRadius: '4px', border: '1px solid #ddd' }
+        })
+      ),
+      h('div', { style: { marginBottom: '15px' } },
+        h('label', { style: { display: 'block', marginBottom: '5px' } }, 'Кому:'),
+        h('input', {
+          type: 'text',
+          value: form.recipient,
+          onInput: (e) => setForm({ ...form, recipient: e.target.value }),
+          placeholder: 'Имя получателя',
+          style: { width: '100%', padding: '10px', fontSize: '16px', borderRadius: '4px', border: '1px solid #ddd' }
+        })
+      ),
+      h('div', { style: { marginBottom: '20px' } },
+        h('label', { style: { display: 'block', marginBottom: '5px' } }, 'Поздравление:'),
+        h('textarea', {
+          value: form.message,
+          onInput: (e) => setForm({ ...form, message: e.target.value }),
+          placeholder: 'Ваше поздравление',
+          rows: 4,
+          style: { width: '100%', padding: '10px', fontSize: '16px', borderRadius: '4px', border: '1px solid #ddd' }
+        })
+      ),
+      h('button', {
+        onClick: handleBuy,
+        style: { padding: '15px 30px', fontSize: '18px', background: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', width: '100%' }
+      }, 'Оплатить ₽' + selected.price),
+      h('button', {
+        onClick: () => setView('details'),
+        style: { marginTop: '10px', padding: '10px 20px', background: '#fff', border: '1px solid #ddd', borderRadius: '4px', cursor: 'pointer', width: '100%' }
+      }, '← Назад')
+    );
+  }
+
+  if (view === 'payment' && loading) {
+    return h('div', { style: { padding: '20px', textAlign: 'center', minHeight: '100vh', background: '#f9f9f9' } },
+      h('h2', {}, 'Оплата...'),
+      h('p', {}, 'Подождите, обрабатываем ваш заказ...')
+    );
+  }
+
+  if (view === 'success') {
+    return h('div', { style: { padding: '20px', textAlign: 'center', minHeight: '100vh', background: '#f9f9f9' } },
+      h('h2', { style: { color: '#4CAF50' } }, '✅ Спасибо за покупку!'),
+      h('p', {}, 'Ваш сертификат успешно создан.'),
+      h('button', {
+        onClick: () => setView('vault'),
+        style: { marginTop: '20px', padding: '15px 30px', fontSize: '18px', background: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }
+      }, '📦 Посмотреть мои сертификаты'),
+      h('button', {
+        onClick: () => { setView('catalog'); setSelected(null); setForm({ sender: '', recipient: '', message: '' }); },
+        style: { marginTop: '10px', padding: '10px 20px', background: '#fff', border: '1px solid #ddd', borderRadius: '4px', cursor: 'pointer' }
+      }, 'Купить ещё')
+    );
+  }
+
+  return h('div', {}, 'Загрузка...');
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(h(App));
