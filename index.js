@@ -158,7 +158,8 @@ function App() {
       setVault(updatedVault);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedVault));
       setView('success');
-      if (tg && tg.sendData) {
+      // if (tg && tg.sendData) {
+      /*
         tg.sendData(JSON.stringify({
           id: newOrder.id,
           name: newOrder.name,
@@ -169,6 +170,7 @@ function App() {
           price: newOrder.price,
           expiry: newOrder.expiry
       }));
+      */
 }
 
       haptic('heavy');
