@@ -62,7 +62,7 @@ function App() {
     }
     
   fetch('https://n8n.meyrenkul.ru/webhook/8B385ffa-6c51-49ba-8e66-a17cf24189b5', {  method: 'POST',      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'init_user', user: userData })
+      body: JSON.stringify({ type: 'init_user', action: 'init_user', user: userData })
     }).then(function(res) {
       if (res.ok) {
         console.log('[init] User registered/checked successfully', userData);
