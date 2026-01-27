@@ -22,6 +22,7 @@ const CERTIFICATES = {
     { id: 'spb-3', name: 'ПРЕМИУМ', time: '60 МИН', price: 6100, includes: ['60 мин съемки', 'Все исходники', '60 фото в обработке'] }
   ]
 };
+const WEBHOOK_URL = 'https://n8n.meyrenkul.ru/webhook/8B385ffa-6c51-49ba-8e66-a17cf24189b5';
 
 function App() {
   const { useState, useEffect } = React;
@@ -66,9 +67,17 @@ function App() {
     }).then(function(res) {
       if (res.ok) {
         console.log('[init] User registered/checked successfully', userData);
+              // Получаем историю покупок от n8n
+      return res.json();
       } else {
         console.warn('[init] Webhook response status:', res.status);
       }
+      }).then(function(data) {
+    if (data && Array.isArray(data.certificates)) {
+      console.log('[init] Loaded certificates from n8n:', data.certificates);
+      setVault(data.certificates);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data.certificates));
+    }
     }).catch(function(err) {
       console.error('[init] Webhook error:', err);
     });
@@ -96,6 +105,34 @@ function App() {
 
   function handleBuy() {
     haptic('medium');
+
+      // Отправляем данные заказа на вебхук
+  const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+  const orderData = {
+    action: 'create_order',
+    telegram_id: tgUser && tgUser.id,
+    tariff_id: selectedTariff && selectedTariff.id,
+    tariff_name: selectedTariff && selectedTariff.name,
+    city: city,
+    design_id: selectedDesign && selectedDesign.id,
+    sender_name: form.sender,
+    recipient_name: form.recipient,
+    greeting_message: form.message
+  };
+  
+  fetch(WEBHOOK_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(orderData)
+  }).then(function(res) {
+    if (res.ok) {
+      console.log('[create_order] Order sent successfully');
+    } else {
+      console.warn('[create_order] Webhook failed, status:', res.status);
+    }
+  }).catch(function(err) {
+    console.error('[create_order] Webhook error:', err);
+  });
     setView('success');
 
     setTimeout(function () {
